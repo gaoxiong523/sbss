@@ -1,0 +1,178 @@
+version: '3.5'
+
+services:
+#namesrv1
+  rmqnamesrv1:
+    image: foxiswho/rocketmq:server
+    container_name: rmqnamesrv1
+    ports:
+      - 9876:9876
+    volumes:
+      - ./namesrv1/logs:/opt/logs
+      - ./namesrv1/store:/opt/store
+    environment:
+      JAVA_OPTS: " -Duser.home=/opt"
+      JAVA_OPT_EXT: "-Xms128m -Xmx128m -Xmn128m"
+    networks:
+        rmq:
+          aliases:
+            - rmqnamesrv1
+#namesrv2
+  rmqnamesrv2:
+    image: foxiswho/rocketmq:server
+    container_name: rmqnamesrv2
+    ports:
+      - 9877:9876
+    volumes:
+      - ./namesrv2/logs:/opt/logs
+      - ./namesrv2/store:/opt/store
+    environment:
+      JAVA_OPTS: " -Duser.home=/opt"
+      JAVA_OPT_EXT: "-Xms128m -Xmx128m -Xmn128m"
+    networks:
+        rmq:
+          aliases:
+            - rmqnamesrv2
+
+#broker-master-1
+  rmqbroker-master-1:
+    image: foxiswho/rocketmq:broker
+    container_name: rmqbroker-master-1
+    links:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    ports:
+      - 10909:10909
+      - 10911:10911
+      - 10912:10912
+    privileged: true
+    volumes:
+      - ./brokerconf_master_1/logs:/opt/logs
+      - ./brokerconf_master_1/store:/opt/store
+      - ./brokerconf_master_1/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+       # NAMESRV_ADDR: "192.168.150.131:9876;192.168.150.131:9877"
+        JAVA_OPTS: " -Duser.home=/opt"
+        JAVA_OPT_EXT: "-server -Xms128m -Xmx128m -Xmn128m"
+    command: mqbroker -c /etc/rocketmq/broker.conf
+    depends_on:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-master-2
+
+#broker-master-2
+  rmqbroker-master-2:
+    image: foxiswho/rocketmq:broker
+    container_name: rmqbroker-master-2
+    links:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    ports:
+      - 10809:10809
+      - 10811:10811
+      - 10812:10812
+    privileged: true
+    volumes:
+      - ./brokerconf_master_2/logs:/opt/logs
+      - ./brokerconf_master_2/store:/opt/store
+      - ./brokerconf_master_2/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+    #    NAMESRV_ADDR: "192.168.150.131:9877;192.168.150.131:9876"
+        JAVA_OPTS: " -Duser.home=/opt"
+        JAVA_OPT_EXT: "-server -Xms128m -Xmx128m -Xmn128m"
+    command: mqbroker -c /etc/rocketmq/broker.conf
+    depends_on:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-master-2
+
+#broker-slave-1
+  rmqbroker-slave-1:
+    image: foxiswho/rocketmq:broker
+    container_name: rmqbroker-slave-1
+    links:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    ports:
+      - 10709:10709
+      - 10711:10711
+      - 10712:10712
+    privileged: true
+    volumes:
+      - ./brokerconf_slave_1/logs:/opt/logs
+      - ./brokerconf_slave_1/store:/opt/store
+      - ./brokerconf_slave_1/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+     #   NAMESRV_ADDR: "192.168.150.131:9876;192.168.150.131:9877"
+        JAVA_OPTS: " -Duser.home=/opt"
+        JAVA_OPT_EXT: "-server -Xms128m -Xmx128m -Xmn128m"
+    command: mqbroker -c /etc/rocketmq/broker.conf
+    depends_on:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-slave-1
+#broker-slave-2
+  rmqbroker-slave-2:
+    image: foxiswho/rocketmq:broker
+    container_name: rmqbroker-slave-2
+    links:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    ports:
+      - 10609:10609
+      - 10611:10611
+      - 10612:10612
+    privileged: true
+    volumes:
+      - ./brokerconf_slave_2/logs:/opt/logs
+      - ./brokerconf_slave_2/store:/opt/store
+      - ./brokerconf_slave_2/broker.conf:/etc/rocketmq/broker.conf
+    environment:
+     #   NAMESRV_ADDR: "192.168.150.131:9877;192.168.150.131:9876"
+        JAVA_OPTS: " -Duser.home=/opt"
+        JAVA_OPT_EXT: "-server -Xms128m -Xmx128m -Xmn128m"
+    command: mqbroker -c /etc/rocketmq/broker.conf
+    depends_on:
+      - rmqnamesrv1
+      - rmqnamesrv2
+    networks:
+      rmq:
+        aliases:
+          - rmqbroker-slave-2
+
+
+  rmqconsole:
+    image: styletang/rocketmq-console-ng
+    container_name: rmqconsole
+    ports:
+      - 8180:8080
+    environment:
+        JAVA_OPTS: "-Drocketmq.config.namesrvAddr=106.12.84.126:9876;106.12.84.126:9877 -Dcom.rocketmq.sendMessageWithVIPChannel=false"
+    depends_on:
+      - rmqnamesrv1
+      - rmqnamesrv2
+      - rmqbroker-master-1
+      - rmqbroker-master-2
+      - rmqbroker-slave-1
+      - rmqbroker-slave-2
+    networks:
+      rmq:
+        aliases:
+          - rmqconsole
+    links:
+      - rmqnamesrv1
+      - rmqnamesrv2
+
+networks:
+  rmq:
+    name: rmq
+    driver: bridge

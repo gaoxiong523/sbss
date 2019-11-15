@@ -1,0 +1,51 @@
+version: "3"
+services:
+  master:
+    image: docker.io/centos/mysql-57-centos7
+    container_name: master
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+    privileged: true
+    restart: unless-stopped
+    volumes:
+      - ./data/master/data:/var/lib/mysql
+      - ./conf/master/my.cnf:/etc/mysql/conf.d
+    networks:
+      mysqlnet:
+        - aliases:
+            - master
+  slave0:
+    image: docker.io/centos/mysql-57-centos7
+    container_name: slave0
+    ports:
+      - 3307:3306
+    privileged: true
+    volumes:
+      - ./slave0/logs:/opt/logs
+    depends_on:
+      - master
+    networks:
+      mysqlnet:
+        - aliases:
+            - slave0
+  slave1:
+    image: docker.io/centos/mysql-57-centos7
+    container_name: slave1
+    ports:
+      - 3308:3306
+    privileged: true
+    volumes:
+      - ./slave1/logs:/opt/logs
+    depends_on:
+      - master
+    networks:
+      mysqlnet:
+        - aliases:
+            - slave1
+
+networks:
+  mysqlnet:
+    name: mysqlnet
+    driver: bridge
